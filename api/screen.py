@@ -78,12 +78,21 @@ def screen_finviz(strategy="momentum"):
     foverview.set_filter(filters_dict=filters)
     df = foverview.screener_view()
     if df is None or df.empty:
-        return []
-    return df["Ticker"].tolist()
+        return [], {}
+    # Return tickers + metadata from Finviz
+    meta = {}
+    for _, row in df.iterrows():
+        meta[row["Ticker"]] = {
+            "company": row.get("Company", ""),
+            "sector": row.get("Sector", ""),
+            "pe": row.get("P/E", 0),
+            "market_cap": row.get("Market Cap", 0),
+        }
+    return df["Ticker"].tolist(), meta
 
 
-def score_ticker(ticker):
-    """Fetch Yahoo data and score a ticker."""
+def score_ticker(ticker, strategy="momentum", meta=None):
+    """Fetch Yahoo data and score a ticker with strategy-specific reasons."""
     url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}"
     r = requests.get(url, params={"range": "1y", "interval": "1d"},
                      headers={"User-Agent": "Mozilla/5.0"}, timeout=5)
@@ -125,20 +134,44 @@ def score_ticker(ticker):
         perf_3m * 0.2
     )
 
+    # Strategy-specific reasons
     reasons = []
-    if len(closes) >= 200 and price > sma200:
-        reasons.append("Above 200-day avg")
-    if price > sma50:
-        reasons.append("Above 50-day avg")
-    if perf_1y > 30:
-        reasons.append(f"Up {perf_1y:.0f}% this year")
-    elif perf_1y > 0:
-        reasons.append(f"Up {perf_1y:.0f}% this year")
-    if perf_1m > 5:
-        reasons.append("Strong recent momentum")
+    m = meta or {}
+    pe = m.get("pe", 0)
+
+    if strategy == "value":
+        if pe and isinstance(pe, (int, float)) and pe > 0:
+            reasons.append(f"P/E: {pe:.1f}")
+        reasons.append(f"Up {perf_1y:.0f}% YTD")
+        if perf_1y > 100:
+            reasons.append("⚠️ Extended")
+    elif strategy == "dividend":
+        if pe and isinstance(pe, (int, float)) and pe > 0:
+            reasons.append(f"P/E: {pe:.1f}")
+        reasons.append(f"Up {perf_1y:.0f}% YTD")
+    elif strategy == "garp":
+        if pe and isinstance(pe, (int, float)) and pe > 0:
+            reasons.append(f"P/E: {pe:.1f}")
+        if perf_1m > 5:
+            reasons.append(f"+{perf_1m:.0f}% this month")
+        reasons.append(f"Up {perf_1y:.0f}% YTD")
+    elif strategy == "quality":
+        reasons.append(f"Up {perf_1y:.0f}% YTD")
+        if perf_1m > 5:
+            reasons.append("Strong momentum")
+        if perf_1y > 100:
+            reasons.append("⚠️ Extended — verify P/E")
+    else:  # momentum
+        if perf_1m > 5:
+            reasons.append(f"+{perf_1m:.0f}% this month")
+        reasons.append(f"Up {perf_1y:.0f}% YTD")
+        if perf_1y > 100:
+            reasons.append("⚠️ Extended — verify P/E")
 
     return {
         "ticker": ticker,
+        "company": m.get("company", ""),
+        "sector": m.get("sector", ""),
         "price": round(price, 2),
         "score": round(score, 2),
         "perf_1m": round(perf_1m, 1),
@@ -150,7 +183,7 @@ def score_ticker(ticker):
 
 def screen_stocks(strategy="momentum"):
     """Full pipeline: Finviz screens market → Yahoo scores results."""
-    tickers = screen_finviz(strategy)
+    tickers, meta = screen_finviz(strategy)
 
     if not tickers:
         return None, "unreliable", "Finviz returned no results. Try a different strategy or check back later."
@@ -159,7 +192,7 @@ def screen_stocks(strategy="momentum"):
     failures = 0
     for ticker in tickers[:60]:  # Cap at 60 to stay within timeout
         try:
-            data = score_ticker(ticker)
+            data = score_ticker(ticker, strategy, meta.get(ticker, {}))
             if data:
                 results.append(data)
             else:

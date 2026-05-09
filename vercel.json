@@ -4,17 +4,17 @@
       "runtime": "@vercel/python@4.3.1",
       "maxDuration": 30
     },
-    "api/backtest.py": {
+    "api/picks.py": {
       "runtime": "@vercel/python@4.3.1",
-      "maxDuration": 30
+      "maxDuration": 60
     },
     "api/hot.py": {
       "runtime": "@vercel/python@4.3.1",
       "maxDuration": 30
     },
-    "api/picks.py": {
+    "api/history.py": {
       "runtime": "@vercel/python@4.3.1",
-      "maxDuration": 60
+      "maxDuration": 15
     }
   }
 }

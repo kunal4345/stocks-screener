@@ -1,0 +1,34 @@
+name: Save Daily Picks
+
+on:
+  schedule:
+    - cron: '0 21 * * 1-5'  # 9 PM UTC = 2 PM PT, weekdays only
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  save-picks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch picks from API
+        run: |
+          curl -s --max-time 60 "https://stocks-site-gamma.vercel.app/api/picks" > /tmp/picks.json
+          DATE=$(date -u +%Y-%m-%d)
+          cp /tmp/picks.json history/${DATE}.json
+          echo "Saved picks for ${DATE}"
+          cat /tmp/picks.json | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          print(f'Picks: {data.get(\"count\", 0)}')
+          for p in data.get('picks', []):
+              print(f'  {p[\"ticker\"]} ({p[\"score\"]})')
+          "
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add history/
+          git diff --cached --quiet || git commit -m "daily picks $(date -u +%Y-%m-%d)"
+          git push
