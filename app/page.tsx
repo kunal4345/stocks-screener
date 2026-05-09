@@ -33,12 +33,32 @@ type BacktestResult = {
 
 const STRATEGIES = [
   { id: "hot", name: "🔥 Hot", desc: "Analyst upgrades + momentum + Reddit buzz" },
-  { id: "momentum", name: "Momentum", desc: "Riding the wave — stocks already ripping higher" },
-  { id: "value", name: "Value", desc: "Warren Buffett style — cheap, profitable, low debt" },
-  { id: "garp", name: "GARP", desc: "Peter Lynch style — growing fast but not overpriced" },
-  { id: "dividend", name: "Dividend", desc: "Passive income — growing dividends you can live off" },
-  { id: "quality", name: "Quality", desc: "Best businesses — fat margins, analysts love them" },
+  { id: "momentum", name: "📈 Momentum", desc: "Stocks already ripping higher" },
+  { id: "value", name: "💎 Value", desc: "Buffett style — cheap & profitable" },
+  { id: "garp", name: "⚖️ GARP", desc: "Lynch style — growth at reasonable price" },
+  { id: "dividend", name: "💰 Dividend", desc: "Growing passive income" },
+  { id: "quality", name: "🏆 Quality", desc: "Best businesses, fat margins" },
 ];
+
+function ScoreBadge({ score }: { score: number }) {
+  const color = score >= 80 ? "bg-green-500" : score >= 70 ? "bg-emerald-600" : "bg-yellow-600";
+  return (
+    <span className={`${color} text-white text-xs font-bold px-2 py-0.5 rounded-full`}>
+      {score}
+    </span>
+  );
+}
+
+function PerfBadge({ value, label }: { value: number; label: string }) {
+  return (
+    <div className="text-center">
+      <div className={`text-sm font-semibold ${value >= 0 ? "text-green-400" : "text-red-400"}`}>
+        {value > 0 ? "+" : ""}{value}%
+      </div>
+      <div className="text-[10px] text-gray-500 uppercase">{label}</div>
+    </div>
+  );
+}
 
 export default function Home() {
   const [picks, setPicks] = useState<Pick[]>([]);
@@ -103,174 +123,194 @@ export default function Home() {
   useEffect(() => { fetchStocks(strategy); }, [strategy]);
 
   return (
-    <main className="min-h-screen bg-black text-white p-6 max-w-5xl mx-auto">
-      <h1 className="text-3xl font-bold mb-1">stocks.srkunal.space</h1>
-      <p className="text-gray-400 mb-6 text-sm">
-        AI-scored stock recommendations · Full market scan
-      </p>
-
-      {/* === TOP PICKS SECTION === */}
-      <section className="mb-10">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-xl font-bold">Top Picks</h2>
-          <button onClick={fetchPicks} className="text-xs text-gray-400 hover:text-white">
-            {picksLoading ? "Loading..." : "Refresh"}
-          </button>
+    <main className="min-h-screen bg-[#0a0a0f] text-white">
+      {/* Header */}
+      <header className="border-b border-gray-800/50 backdrop-blur-sm sticky top-0 z-10 bg-[#0a0a0f]/80">
+        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-lg font-bold tracking-tight">stocks.srkunal.space</h1>
+            <p className="text-xs text-gray-500">Full market scan · Live data</p>
+          </div>
+          {fetchedAt && quality === "good" && (
+            <span className="text-[10px] text-green-500 bg-green-500/10 px-2 py-1 rounded-full">
+              ● Live
+            </span>
+          )}
         </div>
-        <p className="text-xs text-gray-500 mb-4">
-          Composite score: analyst ratings (25%) + valuation (20%) + earnings (15%) + insider buying (15%) + technical timing (15%) + Reddit (10%)
-        </p>
+      </header>
 
-        {picksWarning && (
-          <div className="mb-3 p-3 rounded border bg-yellow-950 border-yellow-700 text-yellow-200 text-sm">
-            {picksWarning}
-          </div>
-        )}
+      <div className="max-w-5xl mx-auto px-4 py-6 space-y-10">
 
-        {picksLoading && <p className="text-gray-400 py-6 text-center">Scoring stocks across 6 factors...</p>}
-
-        {!picksLoading && picks.length > 0 && (
-          <div className="space-y-2">
-            {picks.map((p) => (
-              <div key={p.ticker} className="border border-gray-800 rounded-lg p-4 hover:border-green-800 bg-gray-950">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm">{p.label}</span>
-                    <span className="text-xl font-bold">{p.ticker}</span>
-                    <span className="text-gray-400">${p.price}</span>
-                    <span className="text-sm font-mono bg-gray-800 px-2 py-0.5 rounded">
-                      {p.score}/100
-                    </span>
-                  </div>
-                  <div className="flex gap-3 text-sm">
-                    <span className={p.perf_1m >= 0 ? "text-green-400" : "text-red-400"}>
-                      1M: {p.perf_1m > 0 ? "+" : ""}{p.perf_1m}%
-                    </span>
-                    <span className="text-gray-400">
-                      {p.pct_from_high}% from high
-                    </span>
-                  </div>
-                </div>
-                <div className="mt-2 flex gap-2 flex-wrap">
-                  {p.reasons.map((r, i) => (
-                    <span key={i} className="text-xs bg-green-950 text-green-300 border border-green-900 px-2 py-0.5 rounded">
-                      {r}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {!picksLoading && picks.length === 0 && !picksWarning && (
-          <p className="text-gray-500 text-center py-4">No stocks scored above 60 right now.</p>
-        )}
-      </section>
-
-      {/* === STRATEGY SCREENER SECTION === */}
-      <section>
-        <h2 className="text-xl font-bold mb-3">Strategy Screener</h2>
-
-        <div className="flex gap-1 mb-4 overflow-x-auto pb-2">
-          {STRATEGIES.map((s) => (
+        {/* === TOP PICKS === */}
+        <section>
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="text-lg font-bold">Top Picks</h2>
             <button
-              key={s.id}
-              onClick={() => setStrategy(s.id)}
-              className={`px-3 py-2 rounded text-sm whitespace-nowrap transition-colors ${
-                strategy === s.id
-                  ? "bg-green-600 text-white"
-                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
-              }`}
+              onClick={fetchPicks}
+              disabled={picksLoading}
+              className="text-xs text-gray-400 hover:text-white transition-colors disabled:opacity-50"
             >
-              {s.name}
+              {picksLoading ? "Scoring..." : "↻ Refresh"}
             </button>
-          ))}
-        </div>
-
-        <p className="text-xs text-gray-500 mb-4">
-          {STRATEGIES.find((s) => s.id === strategy)?.desc}
-        </p>
-
-        {warning && (
-          <div className={`mb-4 p-4 rounded-lg border ${
-            quality === "unreliable" || quality === "error"
-              ? "bg-red-950 border-red-700 text-red-200"
-              : "bg-yellow-950 border-yellow-700 text-yellow-200"
-          }`}>
-            <p className="font-bold">{quality === "unreliable" || quality === "error" ? "⛔ DATA UNRELIABLE" : "⚠️ Warning"}</p>
-            <p className="text-sm mt-1">{warning}</p>
           </div>
-        )}
+          <p className="text-xs text-gray-600 mb-4">
+            Scored on: analysts · valuation · earnings · insider buying · technicals · social
+          </p>
 
-        {fetchedAt && quality === "good" && (
-          <p className="text-xs text-green-600 mb-4">✓ Live data · {new Date(fetchedAt).toLocaleString()}</p>
-        )}
+          {picksWarning && (
+            <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-300 text-sm">
+              ⚠️ {picksWarning}
+            </div>
+          )}
 
-        {loading && (
-          <div className="text-gray-400 py-8 text-center">
-            <p>Scanning entire market...</p>
-            <p className="text-sm mt-1">~10 seconds</p>
-          </div>
-        )}
+          {picksLoading && (
+            <div className="py-12 text-center">
+              <div className="inline-block w-5 h-5 border-2 border-green-500 border-t-transparent rounded-full animate-spin mb-2" />
+              <p className="text-sm text-gray-400">Analyzing stocks across 6 factors...</p>
+            </div>
+          )}
 
-        {!loading && stocks.length > 0 && (
-          <div className="space-y-2">
-            {stocks.map((s, i) => (
-              <div key={s.ticker} className="border border-gray-800 rounded-lg p-4 hover:border-gray-600">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-gray-500 text-sm mr-2">#{i + 1}</span>
-                    <span className="text-xl font-bold">{s.ticker}</span>
-                    <span className="ml-3 text-gray-400">${s.price}</span>
+          {!picksLoading && picks.length > 0 && (
+            <div className="grid gap-3">
+              {picks.map((p) => (
+                <div key={p.ticker} className="group rounded-xl border border-gray-800/60 bg-gray-900/30 p-4 hover:border-green-500/30 hover:bg-gray-900/60 transition-all">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <ScoreBadge score={p.score} />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-lg">{p.ticker}</span>
+                          <span className="text-gray-400 text-sm">${p.price}</span>
+                        </div>
+                        <span className="text-xs text-gray-500">{p.pct_from_high}% from 52w high</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-4 shrink-0">
+                      <PerfBadge value={p.perf_1m} label="1M" />
+                      <PerfBadge value={p.perf_1y} label="1Y" />
+                    </div>
                   </div>
-                  <div className="flex gap-3 text-sm">
-                    <span className={s.perf_1m >= 0 ? "text-green-400" : "text-red-400"}>
-                      1M: {s.perf_1m > 0 ? "+" : ""}{s.perf_1m}%
-                    </span>
-                    {s.perf_3m !== undefined && (
-                      <span className={s.perf_3m >= 0 ? "text-green-400" : "text-red-400"}>
-                        3M: {s.perf_3m > 0 ? "+" : ""}{s.perf_3m}%
+                  <div className="mt-3 flex gap-1.5 flex-wrap">
+                    {p.reasons.map((r, i) => (
+                      <span key={i} className="text-[11px] bg-white/5 text-gray-300 px-2 py-0.5 rounded-full border border-white/5">
+                        {r}
                       </span>
-                    )}
-                    <span className={s.perf_1y >= 0 ? "text-green-400" : "text-red-400"}>
-                      1Y: {s.perf_1y > 0 ? "+" : ""}{s.perf_1y}%
-                    </span>
-                  </div>
-                </div>
-                <div className="mt-2 flex items-center justify-between">
-                  <div className="flex gap-2 flex-wrap">
-                    {s.reasons.map((r, j) => (
-                      <span key={j} className="text-xs bg-gray-800 px-2 py-1 rounded">{r}</span>
                     ))}
                   </div>
-                  <button
-                    onClick={() => runBacktest(s.ticker)}
-                    className="text-xs text-blue-400 hover:text-blue-300"
-                  >
-                    {btLoading === s.ticker ? "..." : "Backtest"}
-                  </button>
                 </div>
-                {backtest && backtest.ticker === s.ticker && (
-                  <div className="mt-3 text-sm bg-gray-900 rounded p-3 grid grid-cols-4 gap-2">
-                    <div>Return: <span className="text-green-400">{backtest.return_pct}%</span></div>
-                    <div>B&H: {backtest.buy_hold_pct}%</div>
-                    <div>Trades: {backtest.num_trades}</div>
-                    <div>Win: {backtest.win_rate}%</div>
-                  </div>
-                )}
-              </div>
+              ))}
+            </div>
+          )}
+
+          {!picksLoading && picks.length === 0 && !picksWarning && (
+            <div className="py-8 text-center text-gray-600 text-sm">
+              No stocks scored above 60 right now. Market may be overextended.
+            </div>
+          )}
+        </section>
+
+        {/* === STRATEGY SCREENER === */}
+        <section>
+          <h2 className="text-lg font-bold mb-3">Screener</h2>
+
+          {/* Tabs */}
+          <div className="flex gap-2 overflow-x-auto pb-3 -mx-4 px-4 scrollbar-hide">
+            {STRATEGIES.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => setStrategy(s.id)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
+                  strategy === s.id
+                    ? "bg-white text-black"
+                    : "bg-gray-800/60 text-gray-400 hover:bg-gray-700/60 hover:text-gray-200"
+                }`}
+              >
+                {s.name}
+              </button>
             ))}
           </div>
-        )}
 
-        {!loading && stocks.length === 0 && !warning && (
-          <p className="text-gray-500 py-8 text-center">No stocks pass this filter right now.</p>
-        )}
-      </section>
+          <p className="text-xs text-gray-600 mb-4">
+            {STRATEGIES.find((s) => s.id === strategy)?.desc}
+          </p>
 
-      <footer className="mt-12 text-xs text-gray-600">
-        Not financial advice. Full market scan via Finviz + Yahoo Finance + Reddit. Scores are algorithmic, not human analysis.
+          {/* Warnings */}
+          {warning && (
+            <div className={`mb-4 p-3 rounded-lg text-sm ${
+              quality === "unreliable" || quality === "error"
+                ? "bg-red-500/10 border border-red-500/20 text-red-300"
+                : "bg-yellow-500/10 border border-yellow-500/20 text-yellow-300"
+            }`}>
+              {quality === "unreliable" || quality === "error" ? "⛔" : "⚠️"} {warning}
+            </div>
+          )}
+
+          {/* Loading */}
+          {loading && (
+            <div className="py-12 text-center">
+              <div className="inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mb-2" />
+              <p className="text-sm text-gray-400">Scanning market...</p>
+            </div>
+          )}
+
+          {/* Results */}
+          {!loading && stocks.length > 0 && (
+            <div className="grid gap-2">
+              {stocks.map((s, i) => (
+                <div key={s.ticker} className="group rounded-xl border border-gray-800/40 bg-gray-900/20 p-3 sm:p-4 hover:border-gray-700 transition-all">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-xs text-gray-600 w-5">{i + 1}</span>
+                      <span className="font-bold">{s.ticker}</span>
+                      <span className="text-gray-500 text-sm">${s.price}</span>
+                    </div>
+                    <div className="flex gap-3 shrink-0">
+                      <PerfBadge value={s.perf_1m} label="1M" />
+                      {s.perf_3m !== undefined && <PerfBadge value={s.perf_3m} label="3M" />}
+                      <PerfBadge value={s.perf_1y} label="1Y" />
+                    </div>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <div className="flex gap-1.5 flex-wrap">
+                      {s.reasons.map((r, j) => (
+                        <span key={j} className="text-[11px] bg-white/5 text-gray-400 px-2 py-0.5 rounded-full">
+                          {r}
+                        </span>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => runBacktest(s.ticker)}
+                      className="text-[11px] text-blue-400 hover:text-blue-300 shrink-0 opacity-0 group-hover:opacity-100 sm:opacity-100 transition-opacity"
+                    >
+                      {btLoading === s.ticker ? "..." : "Backtest →"}
+                    </button>
+                  </div>
+                  {backtest && backtest.ticker === s.ticker && (
+                    <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs bg-black/30 rounded-lg p-3">
+                      <div>Strategy: <span className="text-green-400 font-medium">{backtest.return_pct}%</span></div>
+                      <div>Buy & Hold: <span className="font-medium">{backtest.buy_hold_pct}%</span></div>
+                      <div>Trades: <span className="font-medium">{backtest.num_trades}</span></div>
+                      <div>Win rate: <span className="font-medium">{backtest.win_rate}%</span></div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!loading && stocks.length === 0 && !warning && (
+            <div className="py-8 text-center text-gray-600 text-sm">
+              No stocks pass this filter right now.
+            </div>
+          )}
+        </section>
+      </div>
+
+      {/* Footer */}
+      <footer className="border-t border-gray-800/30 mt-12">
+        <div className="max-w-5xl mx-auto px-4 py-6 text-xs text-gray-600">
+          Not financial advice. Data from Finviz + Yahoo Finance + Reddit. Scores are algorithmic.
+        </div>
       </footer>
     </main>
   );
