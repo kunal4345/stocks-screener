@@ -1,0 +1,4 @@
+requests==2.33.1
+pandas==2.2.2
+numpy==2.1.0
+finvizfinance==0.14.7

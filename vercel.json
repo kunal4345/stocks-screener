@@ -1,0 +1,20 @@
+{
+  "functions": {
+    "api/screen.py": {
+      "runtime": "@vercel/python@4.3.1",
+      "maxDuration": 30
+    },
+    "api/backtest.py": {
+      "runtime": "@vercel/python@4.3.1",
+      "maxDuration": 30
+    },
+    "api/hot.py": {
+      "runtime": "@vercel/python@4.3.1",
+      "maxDuration": 30
+    },
+    "api/picks.py": {
+      "runtime": "@vercel/python@4.3.1",
+      "maxDuration": 60
+    }
+  }
+}
